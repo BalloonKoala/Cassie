@@ -108,16 +108,17 @@ class CassieApp:
         log.info("Cassie starting (auto-boot)...")
         self._running = True
 
+        self._memory.open()
+        await self._ws.start()
+        await self._http.start()
+        log.info("UI ready at http://127.0.0.1:8766/")
+
         if not await wait_for_internet(120.0):
-            log.warning("Starting without confirmed internet — will retry on each request")
+            log.warning("No internet yet — STT/LLM will retry when needed")
 
         key = self._config.get("openrouter", {}).get("api_key", "")
         if not key or key == "YOUR_OPENROUTER_API_KEY":
             log.error("Set openrouter.api_key in /opt/cassie/config/config.yaml")
-
-        self._memory.open()
-        await self._ws.start()
-        await self._http.start()
 
         try:
             self._audio.open()

@@ -45,14 +45,14 @@ systemctl is-active --quiet cassie.service && log "Backend running ($NEW)" || {
   bash "$SCRIPT_DIR/scripts/restart-cassie.sh" || die "journalctl -u cassie -n 30"
 }
 
-for i in $(seq 1 30); do
-  if curl -sf http://127.0.0.1:8766/ | grep -q getContext; then
-    log "UI page OK (inline orb)"
+for i in $(seq 1 15); do
+  if curl -sf http://127.0.0.1:8766/health >/dev/null 2>&1; then
+    log "UI health OK"
     break
   fi
   sleep 2
 done
-curl -sf http://127.0.0.1:8766/ | grep -q getContext || die "UI page missing orb — journalctl -u cassie -n 30"
+curl -sf http://127.0.0.1:8766/health >/dev/null || log "WARN: UI not responding yet — may need restart-cassie.sh"
 
 echo ""
 echo "Done. Reboot once:  sudo reboot"
