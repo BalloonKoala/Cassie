@@ -15,16 +15,19 @@ for i in $(seq 1 90); do
   sleep 1
 done
 
-URL="http://127.0.0.1:8766/"
+URL="http://127.0.0.1:8766/?v=$(date +%s)"
+
+CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
+  --disable-session-crashed-bubble --no-first-run \
+  --check-for-update-interval=31536000 \
+  --disable-gpu --disable-gpu-compositing \
+  --disable-dev-shm-usage --disable-translate \
+  --no-default-browser-check --disable-features=TranslateUI"
 
 if command -v chromium-browser >/dev/null 2>&1; then
-  exec chromium-browser --kiosk --noerrdialogs --disable-infobars \
-    --disable-session-crashed-bubble --no-first-run \
-    --check-for-update-interval=31536000 "$URL"
+  exec chromium-browser $CHROMIUM_FLAGS "$URL"
 elif command -v chromium >/dev/null 2>&1; then
-  exec chromium --kiosk --noerrdialogs --disable-infobars \
-    --disable-session-crashed-bubble --no-first-run \
-    --check-for-update-interval=31536000 "$URL"
+  exec chromium $CHROMIUM_FLAGS "$URL"
 else
   echo "No chromium found" >&2
   exec xterm
