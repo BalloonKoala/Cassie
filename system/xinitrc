@@ -26,9 +26,9 @@ elif command -v openbox >/dev/null 2>&1; then
 fi
 sleep 1
 
-# Wait for backend HTTP (up to 90s)
+# Wait until the page actually serves HTML with canvas
 for i in $(seq 1 90); do
-  if curl -sf http://127.0.0.1:8766/health >/dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:8766/ 2>/dev/null | grep -q 'id="canvas"'; then
     break
   fi
   sleep 1
@@ -36,14 +36,14 @@ done
 
 URL="http://127.0.0.1:8766/?v=$(date +%s)"
 
-# --start-maximized fixes Bookworm/Pi kiosk half-screen bug (Chromium not full size at launch)
-CHROMIUM_FLAGS="--kiosk --start-maximized --start-fullscreen \
+CHROMIUM_FLAGS="--kiosk --start-maximized \
   --noerrdialogs --disable-infobars \
   --disable-session-crashed-bubble --no-first-run \
   --check-for-update-interval=31536000 \
   --disable-dev-shm-usage --disable-translate \
   --no-default-browser-check --disable-restore-session-state \
-  --disable-features=TranslateUI"
+  --disable-features=TranslateUI \
+  --disk-cache-size=1 --media-cache-size=1"
 
 if command -v chromium-browser >/dev/null 2>&1; then
   exec chromium-browser $CHROMIUM_FLAGS "$URL"

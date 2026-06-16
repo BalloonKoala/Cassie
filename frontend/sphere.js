@@ -83,6 +83,9 @@
 
   window.addEventListener('resize', resize);
   resize();
+  if (typeof window.cassieStopBoot === 'function') {
+    window.cassieStopBoot();
+  }
 
   window.setSphereState = function (s) {
     targetState = s || 'idle';

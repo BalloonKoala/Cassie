@@ -10,7 +10,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
+      background: #000 !important;
       cursor: none;
     }
     #canvas {
@@ -26,9 +26,39 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <script src="kiosk_boot.js"></script>
-  <script src="mic_border.js"></script>
-  <script src="sphere.js"></script>
-  <script src="ws_client.js"></script>
+  <!-- Inline boot: Pi Chromium shows white until JS paints the canvas -->
+  <script>
+  (function () {
+    var canvas = document.getElementById('canvas');
+    var bootId = null;
+    function paintFallback() {
+      var w = window.innerWidth || screen.width || 800;
+      var h = window.innerHeight || screen.height || 480;
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, w, h);
+      var cx = w / 2, cy = h / 2, r = Math.min(w, h) * 0.11;
+      var g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.05, cx, cy, r);
+      g.addColorStop(0, '#cce8ff');
+      g.addColorStop(0.45, '#3399ff');
+      g.addColorStop(1, '#001833');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    window.cassieStopBoot = function () {
+      if (bootId) { clearInterval(bootId); bootId = null; }
+    };
+    paintFallback();
+    window.addEventListener('resize', paintFallback);
+    bootId = setInterval(paintFallback, 1000);
+  })();
+  </script>
+  <script src="/sphere.js"></script>
+  <script src="/mic_border.js"></script>
+  <script src="/ws_client.js"></script>
 </body>
 </html>

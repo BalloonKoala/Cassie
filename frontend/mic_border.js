@@ -1,6 +1,5 @@
 /**
  * Mic-reactive gray border around the screen edge.
- * Exposes window.setMicLevel(0..1) for WebSocket amplitude updates.
  */
 (function () {
   'use strict';
@@ -10,13 +9,12 @@
   var canvas = document.getElementById('canvas');
   if (!canvas) return;
 
-  var ctx = canvas.getContext('2d');
-
   window.setMicLevel = function (v) {
     targetLevel = Math.max(0, Math.min(1, Number(v) || 0));
   };
 
   window.drawMicBorder = function () {
+    var ctx = canvas.getContext('2d');
     micLevel += (targetLevel - micLevel) * 0.25;
     var w = window.innerWidth;
     var h = window.innerHeight;
