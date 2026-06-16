@@ -179,4 +179,9 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception:
+        logging.basicConfig(level=logging.INFO)
+        logging.exception("Cassie crashed")
+        sys.exit(1)

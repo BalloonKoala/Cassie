@@ -71,8 +71,16 @@ class HTTPServer:
         app.router.add_get("/{name}", self._file)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
-        await web.TCPSite(self._runner, self.host, self.port).start()
-        log.info("HTTP on http://%s:%d", self.host, self.port)
+        for attempt in range(5):
+            try:
+                await web.TCPSite(self._runner, self.host, self.port).start()
+                log.info("HTTP on http://%s:%d", self.host, self.port)
+                return
+            except OSError as e:
+                if attempt >= 4:
+                    raise
+                log.warning("HTTP port busy, retry %d/5: %s", attempt + 1, e)
+                await asyncio.sleep(2)
 
     async def stop(self) -> None:
         if self._runner:

@@ -21,14 +21,22 @@ class WSServer:
         self._amplitude = 0.0
 
     async def start(self) -> None:
-        self._server = await websockets.serve(
-            self._handler,
-            self.host,
-            self.port,
-            ping_interval=20,
-            ping_timeout=20,
-        )
-        log.info("WebSocket server on ws://%s:%d", self.host, self.port)
+        for attempt in range(5):
+            try:
+                self._server = await websockets.serve(
+                    self._handler,
+                    self.host,
+                    self.port,
+                    ping_interval=20,
+                    ping_timeout=20,
+                )
+                log.info("WebSocket server on ws://%s:%d", self.host, self.port)
+                return
+            except OSError as e:
+                if attempt >= 4:
+                    raise
+                log.warning("WS port busy, retry %d/5: %s", attempt + 1, e)
+                await asyncio.sleep(2)
 
     async def stop(self) -> None:
         if self._server:

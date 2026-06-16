@@ -20,7 +20,7 @@ class AudioManager:
         ci, co = a.get("input_device_index"), a.get("output_device_index")
         self.input_device_index = int(ci) if ci is not None else None
         self.output_device_index = int(co) if co is not None else None
-        self._pa = pyaudio.PyAudio()
+        self._pa = None
         self._capture_stream = None
         self._playback_stream = None
         self._playback_channels = 2
@@ -33,12 +33,18 @@ class AudioManager:
     def add_amplitude_callback(self, cb: AmplitudeCallback) -> None:
         self._amp_callbacks.append(cb)
 
+    def _ensure_pa(self) -> None:
+        if self._pa is None:
+            self._pa = pyaudio.PyAudio()
+
     def _log_devices(self) -> None:
+        self._ensure_pa()
         for i in range(self._pa.get_device_count()):
             d = self._pa.get_device_info_by_index(i)
             log.info("Audio device [%d] in=%s out=%s %s", i, int(d["maxInputChannels"]), int(d["maxOutputChannels"]), d["name"])
 
     def _find_usb_mic(self) -> Optional[int]:
+        self._ensure_pa()
         best = None
         for i in range(self._pa.get_device_count()):
             d = self._pa.get_device_info_by_index(i)
@@ -53,6 +59,7 @@ class AudioManager:
         return best
 
     def _find_headphone_out(self) -> Optional[int]:
+        self._ensure_pa()
         for i in range(self._pa.get_device_count()):
             d = self._pa.get_device_info_by_index(i)
             if d.get("maxOutputChannels", 0) <= 0:
@@ -144,6 +151,7 @@ class AudioManager:
     def open(self) -> None:
         if self._running:
             return
+        self._ensure_pa()
         self._open_capture()
         self._open_playback()
         self._running = True
@@ -160,7 +168,11 @@ class AudioManager:
                     pass
         self._capture_stream = self._playback_stream = None
         if self._pa:
-            self._pa.terminate()
+            try:
+                self._pa.terminate()
+            except Exception:
+                pass
+            self._pa = None
         log.info("Audio closed")
 
     @property

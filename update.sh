@@ -39,11 +39,11 @@ find "$INSTALL_DIR" -name "*.sh" -exec sed -i 's/\r$//' {} + 2>/dev/null || true
 chown -R "$CASSIE_USER:$CASSIE_USER" "$INSTALL_DIR"
 chmod -R u+rX "$INSTALL_DIR/frontend" "$INSTALL_DIR/src"
 
-systemctl restart cassie.service
-sleep 4
-systemctl restart cassie.service
-sleep 4
-systemctl is-active --quiet cassie.service && log "Backend running ($NEW)" || die "journalctl -u cassie -n 30"
+systemctl restart cassie.service || bash "$SCRIPT_DIR/scripts/restart-cassie.sh"
+sleep 5
+systemctl is-active --quiet cassie.service && log "Backend running ($NEW)" || {
+  bash "$SCRIPT_DIR/scripts/restart-cassie.sh" || die "journalctl -u cassie -n 30"
+}
 
 for i in $(seq 1 30); do
   if curl -sf http://127.0.0.1:8766/ | grep -q getContext; then
