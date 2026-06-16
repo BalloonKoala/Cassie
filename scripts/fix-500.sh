@@ -27,9 +27,14 @@ done
 
 echo "=== Restart ==="
 systemctl restart cassie.service
-sleep 4
 
-echo "=== Test ==="
+echo "=== Test (wait up to 60s for backend) ==="
+for i in $(seq 1 30); do
+  if curl -sf "http://127.0.0.1:8766/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
 curl -s "http://127.0.0.1:8766/health" || true
 echo ""
 curl -s -o /dev/null -w "GET / -> HTTP %{http_code}\n" "http://127.0.0.1:8766/"

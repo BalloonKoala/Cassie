@@ -116,12 +116,17 @@ class CassieApp:
             log.error("Set openrouter.api_key in /opt/cassie/config/config.yaml")
 
         self._memory.open()
-        self._audio.open()
-        self._audio.play_beep()
         await self._ws.start()
         await self._http.start()
-        self._wake.start()
-        self._amp_task = asyncio.create_task(self._broadcast_mic())
+
+        try:
+            self._audio.open()
+            self._audio.play_beep()
+            self._wake.start()
+            self._amp_task = asyncio.create_task(self._broadcast_mic())
+        except Exception:
+            log.exception("Audio failed — orb UI still works; check mic/USB")
+
         log.info("Cassie ready. Listening for wake word...")
         await self._ws.send_state("idle")
         while self._running:
