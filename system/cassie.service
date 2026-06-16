@@ -2,8 +2,8 @@
 Description=Cassie AI Room Assistant Backend
 After=network-online.target sound.target local-fs.target
 Wants=network-online.target
-StartLimitIntervalSec=300
-StartLimitBurst=5
+StartLimitIntervalSec=0
+StartLimitBurst=10
 
 [Service]
 Type=simple

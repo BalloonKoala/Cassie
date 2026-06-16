@@ -18,6 +18,7 @@ fuser -k 8765/tcp 2>/dev/null || true
 fuser -k 8766/tcp 2>/dev/null || true
 sleep 1
 
+systemctl reset-failed cassie.service 2>/dev/null || true
 systemctl daemon-reload
 systemctl start cassie.service
 sleep 5

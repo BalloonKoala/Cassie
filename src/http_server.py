@@ -1,6 +1,7 @@
 """HTTP server for Cassie frontend."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
