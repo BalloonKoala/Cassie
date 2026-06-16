@@ -1,0 +1,18 @@
+[Unit]
+Description=Cassie USB Deployment Handler (%i)
+After=dev-%i.device
+Requires=dev-%i.device
+# Prevent parallel runs for different devices at the same time
+After=cassie-usb@.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+Environment=DEVICE=%i
+ExecStart=/opt/cassie/system/cassie-usb-handler.sh %i
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cassie-usb
+
+[Install]
+WantedBy=multi-user.target

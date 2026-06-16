@@ -1,0 +1,31 @@
+[Unit]
+Description=Cassie AI Room Assistant Backend
+After=network-online.target sound.target local-fs.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=cassie
+Group=cassie
+WorkingDirectory=/opt/cassie
+Environment=HOME=/home/cassie
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/opt/cassie/venv/bin/python3 /opt/cassie/src/main.py
+
+Restart=always
+RestartSec=5
+TimeoutStartSec=180
+TimeoutStopSec=20
+KillMode=mixed
+KillSignal=SIGTERM
+
+SupplementaryGroups=audio video input
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cassie
+
+[Install]
+WantedBy=multi-user.target

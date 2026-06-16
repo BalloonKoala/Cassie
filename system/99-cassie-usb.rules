@@ -1,0 +1,9 @@
+# udev rule: detect USB storage insertion and trigger cassie-usb service
+# Matches any USB mass storage block device (partition or whole disk)
+# Place at: /etc/udev/rules.d/99-cassie-usb.rules
+
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{ID_FS_TYPE}!="", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="cassie-usb@%k.service"
+
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{DEVTYPE}=="partition", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="cassie-usb@%k.service"

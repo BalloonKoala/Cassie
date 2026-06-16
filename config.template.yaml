@@ -1,0 +1,27 @@
+cassie:
+  name: Cassie
+  max_retrieved_memories: 5
+audio:
+  sample_rate: 48000
+  channels: 1
+  chunk_size: 1024
+  input_device_index: null
+  output_device_index: null
+vad:
+  aggressiveness: 2
+openrouter:
+  api_key: "YOUR_OPENROUTER_API_KEY"
+  stt_model: openai/whisper-large-v3-turbo
+  llm_model: google/gemma-4-26b-a4b-it
+  tts_model: openai/gpt-audio-mini
+  tts_voice: alloy
+websocket:
+  host: 127.0.0.1
+  port: 8765
+http:
+  host: 127.0.0.1
+  port: 8766
+database:
+  path: /opt/cassie/data/memory.db
+logging:
+  level: INFO

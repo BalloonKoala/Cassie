@@ -1,0 +1,4 @@
+# Cassie — auto-start UI on boot (plug in and reboot, nothing else)
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+  exec startx -- -nocursor 2>>/tmp/cassie-startx.log
+fi

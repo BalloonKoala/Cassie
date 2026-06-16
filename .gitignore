@@ -1,0 +1,22 @@
+# Secrets — NEVER commit
+config/config.yaml
+.env
+*.key
+
+# Runtime on Pi
+venv/
+data/
+logs/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# USB / temp
+._*
+*.tmp
