@@ -7,9 +7,8 @@ CASSIE_USER="${CASSIE_USER:-cassie}"
 
 echo "Installing Cassie to $INSTALL_DIR..."
 apt-get update -qq
-apt-get install -y -qq python3 python3-venv python3-pip portaudio19-dev \
-  libasound2-dev alsa-utils chromium unclutter curl rsync xinit x11-xserver-utils \
-  matchbox-window-manager
+apt-get install -y -qq python3 python3-venv python3-pip python3-pygame portaudio19-dev \
+  libasound2-dev alsa-utils libsdl2-dev curl rsync xinit x11-xserver-utils
 
 id "$CASSIE_USER" &>/dev/null || useradd -m -s /bin/bash "$CASSIE_USER"
 usermod -aG audio,video,input "$CASSIE_USER"
@@ -26,7 +25,7 @@ if [[ ! -f "$INSTALL_DIR/config/config.yaml" ]]; then
   echo ">>> Edit $INSTALL_DIR/config/config.yaml and set openrouter.api_key <<<"
 fi
 
-python3 -m venv "$INSTALL_DIR/venv"
+python3 -m venv "$INSTALL_DIR/venv" --system-site-packages
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
@@ -34,7 +33,8 @@ python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml" 2>/dev/
 python3 "$INSTALL_DIR/fix.py" --auto "$INSTALL_DIR" 2>/dev/null || true
 chown -R "$CASSIE_USER:$CASSIE_USER" "$INSTALL_DIR"
 chmod -R u+rX "$INSTALL_DIR/frontend" "$INSTALL_DIR/src"
-bash "$SCRIPT_DIR/system/setup_boot.sh" "$INSTALL_DIR"
+systemctl stop cassie.service 2>/dev/null || true
+systemctl disable cassie.service 2>/dev/null || true
+bash "$INSTALL_DIR/system/setup_boot.sh" "$INSTALL_DIR"
 
-systemctl start cassie.service
-echo "Install done. Set API key if needed, then: sudo reboot"
+echo "Install done (Cassie 2.0 — one Python process). Set API key if needed, then: sudo reboot"

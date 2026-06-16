@@ -9,51 +9,31 @@ die(){ echo "[cassie-update] ERROR: $*" >&2; exit 1; }
 
 OLD="$(tr -d '\r\n' < "$INSTALL_DIR/version.txt" 2>/dev/null || echo 0)"
 NEW="$(tr -d '\r\n' < "$SCRIPT_DIR/version.txt" 2>/dev/null || echo 0)"
-log "Updating $OLD -> $NEW"
+log "Updating $OLD -> $NEW (single-process mode)"
 
 [[ -f "$SCRIPT_DIR/fix.py" ]] && python3 "$SCRIPT_DIR/fix.py" --auto "$SCRIPT_DIR" || true
 systemctl stop cassie.service 2>/dev/null || true
+pkill -u "$CASSIE_USER" -f "$INSTALL_DIR/src/run.py" 2>/dev/null || true
 sleep 2
 
 rsync -a --delete "$SCRIPT_DIR/src/" "$INSTALL_DIR/src/"
-rsync -a --delete "$SCRIPT_DIR/frontend/" "$INSTALL_DIR/frontend/"
 rsync -a "$SCRIPT_DIR/system/" "$INSTALL_DIR/system/"
 cp "$SCRIPT_DIR/requirements.txt" "$SCRIPT_DIR/version.txt" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/patch_config.py" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/patch_config.py" "$INSTALL_DIR/" 2>/dev/null || true
 cp "$SCRIPT_DIR/fix.py" "$INSTALL_DIR/" 2>/dev/null || true
-
-if [[ ! -f "$INSTALL_DIR/config/config.yaml" ]]; then
-  mkdir -p "$INSTALL_DIR/config"
-  cp "$SCRIPT_DIR/config.template.yaml" "$INSTALL_DIR/config/config.yaml"
-fi
 
 sudo -u "$CASSIE_USER" "$INSTALL_DIR/venv/bin/pip" install -q -r "$INSTALL_DIR/requirements.txt" || true
 for f in "$INSTALL_DIR/src"/*.py; do "$INSTALL_DIR/venv/bin/python3" -m py_compile "$f"; done
 
-python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml"
-bash "$INSTALL_DIR/system/setup_boot.sh" "$INSTALL_DIR"
-
-# Fix permissions + encoding on Pi (common cause of HTTP 500)
+python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml" 2>/dev/null || true
 python3 "$INSTALL_DIR/fix.py" --auto "$INSTALL_DIR" 2>/dev/null || true
-find "$INSTALL_DIR" -name "*.sh" -exec sed -i 's/\r$//' {} + 2>/dev/null || true
+bash "$INSTALL_DIR/system/setup_boot.sh" "$INSTALL_DIR"
 chown -R "$CASSIE_USER:$CASSIE_USER" "$INSTALL_DIR"
-chmod -R u+rX "$INSTALL_DIR/frontend" "$INSTALL_DIR/src"
 
-systemctl restart cassie.service || bash "$SCRIPT_DIR/scripts/restart-cassie.sh"
-sleep 5
-systemctl is-active --quiet cassie.service && log "Backend running ($NEW)" || {
-  bash "$SCRIPT_DIR/scripts/restart-cassie.sh" || die "journalctl -u cassie -n 30"
-}
+systemctl disable cassie.service 2>/dev/null || true
+test -f "$INSTALL_DIR/src/run.py" || die "Missing run.py"
 
-for i in $(seq 1 15); do
-  if curl -sf http://127.0.0.1:8766/health >/dev/null 2>&1; then
-    log "UI health OK"
-    break
-  fi
-  sleep 2
-done
-curl -sf http://127.0.0.1:8766/health >/dev/null || log "WARN: UI not responding yet — may need restart-cassie.sh"
-
+log "Updated to $NEW"
 echo ""
-echo "Done. Reboot once:  sudo reboot"
-echo "After that Cassie starts by itself every boot — no manual start/restart."
+echo "Reboot to apply:  sudo reboot"
+echo "Cassie 2.0 = one Python app, no browser, no systemctl start."

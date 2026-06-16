@@ -10,9 +10,10 @@ cp "$INSTALL_DIR/system/getty-autologin.conf" /etc/systemd/system/getty@tty1.ser
 
 cp "$INSTALL_DIR/system/xinitrc" "$HOME_DIR/.xinitrc"
 chmod 755 "$HOME_DIR/.xinitrc"
-chmod 755 "$INSTALL_DIR/system/keep-awake.sh" 2>/dev/null || true
 
-# Disable Linux console screen blank (often ~5 min white/black)
+cp "$INSTALL_DIR/system/bash_profile" "$HOME_DIR/.bash_profile"
+chmod 644 "$HOME_DIR/.bash_profile"
+
 if [[ -f /etc/kbd/config ]]; then
   sed -i 's/^BLANK_TIME=.*/BLANK_TIME=0/' /etc/kbd/config 2>/dev/null || true
   sed -i 's/^POWERDOWN_TIME=.*/POWERDOWN_TIME=0/' /etc/kbd/config 2>/dev/null || true
@@ -20,17 +21,15 @@ if [[ -f /etc/kbd/config ]]; then
   grep -q '^POWERDOWN_TIME=' /etc/kbd/config || echo 'POWERDOWN_TIME=0' >> /etc/kbd/config
 fi
 
-cp "$INSTALL_DIR/system/bash_profile" "$HOME_DIR/.bash_profile"
-chmod 644 "$HOME_DIR/.bash_profile"
-
 if [[ -f "$INSTALL_DIR/config/config.yaml" ]]; then
-  python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml" 2>/dev/null || \
-    python3 "$(dirname "$INSTALL_DIR")/cassie/patch_config.py" "$INSTALL_DIR/config/config.yaml" 2>/dev/null || true
+  python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml" 2>/dev/null || true
 fi
 
+# Cassie 2.0: UI runs from xinitrc (run.py). Old systemd backend stays disabled.
 cp "$INSTALL_DIR/system/cassie.service" /etc/systemd/system/cassie.service
 systemctl daemon-reload
-systemctl enable cassie.service
+systemctl stop cassie.service 2>/dev/null || true
+systemctl disable cassie.service 2>/dev/null || true
 systemctl enable getty@tty1.service
 
 chown -R "$CASSIE_USER:$CASSIE_USER" "$INSTALL_DIR"
