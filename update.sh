@@ -32,6 +32,12 @@ for f in "$INSTALL_DIR/src"/*.py; do "$INSTALL_DIR/venv/bin/python3" -m py_compi
 python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml"
 bash "$INSTALL_DIR/system/setup_boot.sh" "$INSTALL_DIR"
 
+# Fix permissions + encoding on Pi (common cause of HTTP 500)
+python3 "$INSTALL_DIR/fix.py" --auto "$INSTALL_DIR" 2>/dev/null || true
+find "$INSTALL_DIR" -name "*.sh" -exec sed -i 's/\r$//' {} + 2>/dev/null || true
+chown -R "$CASSIE_USER:$CASSIE_USER" "$INSTALL_DIR"
+chmod -R u+rX "$INSTALL_DIR/frontend" "$INSTALL_DIR/src"
+
 systemctl restart cassie.service
 sleep 4
 systemctl is-active --quiet cassie.service && log "Backend running ($NEW)" || die "journalctl -u cassie -n 30"
