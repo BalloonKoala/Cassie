@@ -1,7 +1,13 @@
 # Secrets — NEVER commit
 config/config.yaml
 .env
+server/.env
+server/venv/
 *.key
+
+# Firebase
+.firebase/
+firebase-debug.log
 
 # Runtime on Pi
 venv/

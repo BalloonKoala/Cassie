@@ -1,12 +1,38 @@
 (function () {
   'use strict';
 
+  var defaults = window.CASSIE_DEFAULTS || {};
   var params = new URLSearchParams(location.search);
-  var deviceId = params.get('device') || 'pi-home';
-  var token = params.get('token') || 'change-me';
-  var server = params.get('server') || (location.protocol === 'file:' ? 'http://192.168.7.1:8780' : location.origin);
-  var wsUrl = server.replace(/^http/, 'ws') + '/ws?device=' + encodeURIComponent(deviceId) +
+  var deviceId = params.get('device') || defaults.device || 'pi-home';
+  var token = params.get('token') || defaults.token || 'change-me';
+
+  function resolveServer() {
+    if (params.get('server')) return params.get('server');
+    if (defaults.brainServer) return defaults.brainServer;
+    if (location.protocol === 'file:') return 'http://127.0.0.1:8780';
+    var host = location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return location.origin;
+    // Firebase Hosting serves static files only — brain runs elsewhere until Cloud Run is wired
+    return '';
+  }
+
+  var server = resolveServer();
+  if (!server) {
+    document.getElementById('lock-msg').textContent =
+      'Set brain server: add ?server=wss://YOUR_SERVER to the URL';
+    if (window.cassieOrb) window.cassieOrb.setState('locked');
+    return;
+  }
+
+  var wsBase = server.replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
+  var wsUrl = wsBase.replace(/\/$/, '') + '/ws?device=' + encodeURIComponent(deviceId) +
     '&role=browser&token=' + encodeURIComponent(token);
+
+  if (location.protocol === 'https:' && wsUrl.indexOf('ws://') === 0) {
+    lockMsg.textContent = 'Brain needs wss:// (HTTPS). Use Cloudflare tunnel or Cloud Run.';
+    if (window.cassieOrb) window.cassieOrb.setState('locked');
+    return;
+  }
 
   var lock = document.getElementById('lock');
   var lockMsg = document.getElementById('lock-msg');
@@ -30,6 +56,7 @@
       if (msg.type === 'reply') console.log('[cassie]', msg.text);
     };
     ws.onclose = function () { setTimeout(connect, 2000); };
+    ws.onerror = function () { lockMsg.textContent = 'Cannot reach Cassie brain at ' + server; };
   }
 
   function unlock() {
@@ -39,13 +66,10 @@
 
   function handleCommand(cmd, payload) {
     if (cmd === 'apple_music') {
-      var q = encodeURIComponent(payload.query || '');
-      musicFrame.src = 'https://music.apple.com/us/search?term=' + q;
+      musicFrame.src = 'https://music.apple.com/us/search?term=' + encodeURIComponent(payload.query || '');
       musicLayer.classList.remove('hidden');
     }
-    if (cmd === 'navigate' && payload.url) {
-      location.href = payload.url;
-    }
+    if (cmd === 'navigate' && payload.url) location.href = payload.url;
     if (cmd === 'cassie_home') {
       musicLayer.classList.add('hidden');
       musicFrame.src = 'about:blank';
@@ -57,8 +81,6 @@
     musicFrame.src = 'about:blank';
   });
 
-  // Laptop test: type passphrase or "Cassie what time is it" in console:
-  // cassieTest("146 easy street")
   window.cassieTest = function (text) {
     var ws = new WebSocket(wsUrl);
     ws.onopen = function () { ws.send(JSON.stringify({ type: 'text', text: text })); };
