@@ -20,6 +20,7 @@ rsync -a --delete "$SCRIPT_DIR/frontend/" "$INSTALL_DIR/frontend/"
 rsync -a "$SCRIPT_DIR/system/" "$INSTALL_DIR/system/"
 cp "$SCRIPT_DIR/requirements.txt" "$SCRIPT_DIR/version.txt" "$INSTALL_DIR/"
 cp "$SCRIPT_DIR/patch_config.py" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/fix.py" "$INSTALL_DIR/" 2>/dev/null || true
 
 if [[ ! -f "$INSTALL_DIR/config/config.yaml" ]]; then
   mkdir -p "$INSTALL_DIR/config"

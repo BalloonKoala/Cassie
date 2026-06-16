@@ -18,7 +18,7 @@ rsync -a "$SCRIPT_DIR/src/" "$INSTALL_DIR/src/"
 rsync -a "$SCRIPT_DIR/frontend/" "$INSTALL_DIR/frontend/"
 rsync -a "$SCRIPT_DIR/system/" "$INSTALL_DIR/system/"
 cp "$SCRIPT_DIR/requirements.txt" "$SCRIPT_DIR/version.txt" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/patch_config.py" "$INSTALL_DIR/" 2>/dev/null || true
+cp "$SCRIPT_DIR/patch_config.py" "$SCRIPT_DIR/fix.py" "$INSTALL_DIR/" 2>/dev/null || true
 
 if [[ ! -f "$INSTALL_DIR/config/config.yaml" ]]; then
   cp "$SCRIPT_DIR/config.template.yaml" "$INSTALL_DIR/config/config.yaml"
@@ -30,6 +30,9 @@ python3 -m venv "$INSTALL_DIR/venv"
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
 python3 "$INSTALL_DIR/patch_config.py" "$INSTALL_DIR/config/config.yaml" 2>/dev/null || true
+python3 "$INSTALL_DIR/fix.py" --auto "$INSTALL_DIR" 2>/dev/null || true
+chown -R "$CASSIE_USER:$CASSIE_USER" "$INSTALL_DIR"
+chmod -R u+rX "$INSTALL_DIR/frontend" "$INSTALL_DIR/src"
 bash "$SCRIPT_DIR/system/setup_boot.sh" "$INSTALL_DIR"
 
 systemctl start cassie.service
