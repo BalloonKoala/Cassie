@@ -1,0 +1,9 @@
+# Cassie v3 server — WebSocket hub + voice AI (OpenRouter)
+# Run locally:  cp config.example.env .env && fill OPENROUTER_API_KEY
+#               pip install -r requirements.txt && python main.py
+aiohttp>=3.9.0
+websockets>=12.0
+pyyaml>=6.0
+httpx>=0.27.0
+openai>=2.0.0
+python-dotenv>=1.0.0
