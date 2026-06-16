@@ -1,15 +1,34 @@
 #!/bin/sh
-# Cassie kiosk display — copied to ~/.xinitrc on install/update
+# Cassie kiosk display — X11 on tty1 (startx)
 export DISPLAY=:0
 
 xset s off
 xset -dpms
 xset s noblank
+xsetroot -solid '#000000'
+
 unclutter -idle 0.5 -root &
+
+# Let X settle; wrong timing causes half-screen Chromium on Pi.
+sleep 2
+
+# Full HDMI output
+xrandr --auto 2>/dev/null || true
+for out in HDMI-1 HDMI-2 HDMI; do
+  xrandr --output "$out" --auto 2>/dev/null && break
+done
+
+# Lightweight WM — helps Chromium fill the screen on X11
+if command -v matchbox-window-manager >/dev/null 2>&1; then
+  matchbox-window-manager -use_titlebar no &
+elif command -v openbox >/dev/null 2>&1; then
+  openbox &
+fi
+sleep 1
 
 # Wait for backend HTTP (up to 90s)
 for i in $(seq 1 90); do
-  if curl -sf http://127.0.0.1:8766/ >/dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:8766/health >/dev/null 2>&1; then
     break
   fi
   sleep 1
@@ -17,12 +36,14 @@ done
 
 URL="http://127.0.0.1:8766/?v=$(date +%s)"
 
-CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
+# --start-maximized fixes Bookworm/Pi kiosk half-screen bug (Chromium not full size at launch)
+CHROMIUM_FLAGS="--kiosk --start-maximized --start-fullscreen \
+  --noerrdialogs --disable-infobars \
   --disable-session-crashed-bubble --no-first-run \
   --check-for-update-interval=31536000 \
-  --disable-gpu --disable-gpu-compositing \
   --disable-dev-shm-usage --disable-translate \
-  --no-default-browser-check --disable-features=TranslateUI"
+  --no-default-browser-check --disable-restore-session-state \
+  --disable-features=TranslateUI"
 
 if command -v chromium-browser >/dev/null 2>&1; then
   exec chromium-browser $CHROMIUM_FLAGS "$URL"

@@ -70,12 +70,15 @@
   }
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    canvas.style.width = window.innerWidth + 'px';
-    canvas.style.height = window.innerHeight + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* Pi 3: keep DPR at 1 — high DPR + kiosk timing causes partial canvas clears */
+    dpr = 1;
+    var w = window.innerWidth || document.documentElement.clientWidth || screen.width || 800;
+    var h = window.innerHeight || document.documentElement.clientHeight || screen.height || 480;
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   window.addEventListener('resize', resize);
@@ -353,6 +356,8 @@
 
     var r = baseR * breathe * pulse;
 
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, w, h);
     ctx.clearRect(0, 0, w, h);
 
     drawBackground(w, h, cx, cy, r);

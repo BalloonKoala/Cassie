@@ -8,7 +8,8 @@ CASSIE_USER="${CASSIE_USER:-cassie}"
 echo "Installing Cassie to $INSTALL_DIR..."
 apt-get update -qq
 apt-get install -y -qq python3 python3-venv python3-pip portaudio19-dev \
-  libasound2-dev alsa-utils chromium unclutter curl rsync xinit x11-xserver-utils
+  libasound2-dev alsa-utils chromium unclutter curl rsync xinit x11-xserver-utils \
+  matchbox-window-manager
 
 id "$CASSIE_USER" &>/dev/null || useradd -m -s /bin/bash "$CASSIE_USER"
 usermod -aG audio,video,input "$CASSIE_USER"

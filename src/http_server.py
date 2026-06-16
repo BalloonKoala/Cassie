@@ -34,9 +34,9 @@ def _read_body(path: Path) -> bytes:
 
 
 FALLBACK_HTML = b"""<!DOCTYPE html><html><head><meta charset=utf-8><title>Cassie</title>
-<style>*{margin:0}html,body{background:#000;height:100%}#canvas{width:100vw;height:100vh;display:block}</style>
+<style>*{margin:0}html,body{background:#000;height:100%}#canvas{position:fixed;inset:0;width:100%;height:100%;background:#000}</style>
 </head><body><canvas id=canvas></canvas>
-<script src=mic_border.js></script><script src=sphere.js></script><script src=ws_client.js></script>
+<script src=kiosk_boot.js></script><script src=mic_border.js></script><script src=sphere.js></script><script src=ws_client.js></script>
 </body></html>"""
 
 
