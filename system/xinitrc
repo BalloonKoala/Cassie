@@ -7,6 +7,7 @@ xset s noblank
 xsetroot -solid '#000000'
 unclutter -idle 0.5 -root &
 
+/opt/cassie/system/keep-awake.sh &
 sleep 3
 xrandr --auto 2>/dev/null || true
 
@@ -32,10 +33,15 @@ else
   exec xterm
 fi
 
-exec "$BROWSER" \
-  --kiosk --start-maximized \
-  --noerrdialogs --disable-infobars --no-first-run \
+FLAGS="--kiosk --start-maximized --noerrdialogs --disable-infobars --no-first-run \
   --disable-session-crashed-bubble --disable-restore-session-state \
-  --check-for-update-interval=31536000 \
-  --disk-cache-size=1 \
-  "$URL"
+  --check-for-update-interval=31536000 --disk-cache-size=1 \
+  --disable-background-timer-throttling --disable-renderer-backgrounding \
+  --disable-backgrounding-occluded-windows \
+  --disable-features=CalculateNativeWinOcclusion,IntensiveWakeUpThrottling"
+
+# Restart browser if it crashes or goes blank
+while true; do
+  "$BROWSER" $FLAGS "$URL"
+  sleep 3
+done

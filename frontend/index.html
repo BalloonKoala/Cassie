@@ -40,10 +40,12 @@
   }
 
   function draw() {
+    try {
     t++;
     amp += (targetAmp - amp) * 0.2;
     var w = canvas.width;
     var h = canvas.height;
+    if (w < 2 || h < 2) { resize(); requestAnimationFrame(draw); return; }
     var cx = w * 0.5;
     var cy = h * 0.5;
     var col = COLORS[state] || COLORS.idle;
@@ -83,10 +85,14 @@
     ctx.strokeStyle = 'rgba(' + gray + ',' + gray + ',' + gray + ',' + ba + ')';
     ctx.lineWidth = border;
     ctx.strokeRect(border, border, w - border * 2, h - border * 2);
-
+    } catch (e) {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     requestAnimationFrame(draw);
   }
   draw();
+  setInterval(function() { if (document.hidden) return; try { draw(); } catch (e) {} }, 2000);
 
   function connectWs() {
     var ws;
