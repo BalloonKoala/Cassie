@@ -1,64 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
-  <title>Cassie</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000 !important;
-      cursor: none;
-    }
-    #canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      background: #000;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
+<title>Cassie</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;cursor:none}
+  canvas{position:fixed;top:0;left:0;width:100%;height:100%;display:block}
+</style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
-  <!-- Inline boot: Pi Chromium shows white until JS paints the canvas -->
-  <script>
-  (function () {
-    var canvas = document.getElementById('canvas');
-    var bootId = null;
-    function paintFallback() {
-      var w = window.innerWidth || screen.width || 800;
-      var h = window.innerHeight || screen.height || 480;
-      canvas.width = w;
-      canvas.height = h;
-      var ctx = canvas.getContext('2d', { alpha: false });
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, w, h);
-      var cx = w / 2, cy = h / 2, r = Math.min(w, h) * 0.11;
-      var g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.05, cx, cy, r);
-      g.addColorStop(0, '#cce8ff');
-      g.addColorStop(0.45, '#3399ff');
-      g.addColorStop(1, '#001833');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    window.cassieStopBoot = function () {
-      if (bootId) { clearInterval(bootId); bootId = null; }
+<canvas id="c"></canvas>
+<script>
+(function(){
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var state = 'idle';
+  var amp = 0;
+  var targetAmp = 0;
+  var t = 0;
+  var COLORS = {
+    idle:      {h:210, a:195},
+    listening: {h:145, a:165},
+    thinking:  {h:35,  a:25},
+    speaking:  {h:300, a:280}
+  };
+
+  function resize() {
+    var w = window.innerWidth || screen.width || 800;
+    var h = window.innerHeight || screen.height || 480;
+    canvas.width = w;
+    canvas.height = h;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function hsl(h,s,l,a) {
+    return 'hsla(' + h + ',' + s + '%,' + l + '%,' + (a != null ? a : 1) + ')';
+  }
+
+  function draw() {
+    t++;
+    amp += (targetAmp - amp) * 0.2;
+    var w = canvas.width;
+    var h = canvas.height;
+    var cx = w * 0.5;
+    var cy = h * 0.5;
+    var col = COLORS[state] || COLORS.idle;
+    var pulse = 1 + amp * 0.35 + Math.sin(t * 0.04) * 0.04;
+    if (state === 'thinking') pulse += Math.sin(t * 0.08) * 0.06;
+    if (state === 'speaking') pulse += Math.sin(t * 0.12) * 0.1;
+    var r = Math.min(w, h) * 0.11 * pulse;
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, w, h);
+
+    var glow = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 3);
+    glow.addColorStop(0, hsl(col.h, 80, 55, 0.15));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+
+    var g = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.3, r * 0.05, cx, cy, r);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.2, hsl(col.h, 85, 72, 1));
+    g.addColorStop(0.55, hsl(col.h, 90, 52, 1));
+    g.addColorStop(1, hsl(col.a, 85, 28, 1));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 6.28318);
+    ctx.fill();
+
+    ctx.strokeStyle = hsl(col.h, 70, 65, 0.35);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.08, 0, 6.28318);
+    ctx.stroke();
+
+    var border = 3 + amp * 12;
+    var gray = Math.round(160 + amp * 80);
+    var ba = 0.2 + amp * 0.6;
+    ctx.strokeStyle = 'rgba(' + gray + ',' + gray + ',' + gray + ',' + ba + ')';
+    ctx.lineWidth = border;
+    ctx.strokeRect(border, border, w - border * 2, h - border * 2);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  function connectWs() {
+    var ws;
+    try { ws = new WebSocket('ws://127.0.0.1:8765'); }
+    catch (e) { setTimeout(connectWs, 2000); return; }
+    ws.onmessage = function(ev) {
+      try {
+        var msg = JSON.parse(ev.data);
+        if (msg.type === 'state' && msg.state) state = msg.state;
+        if (msg.amplitude != null) targetAmp = Math.max(0, Math.min(1, msg.amplitude));
+        if (msg.type === 'amplitude') targetAmp = Math.max(0, Math.min(1, msg.amplitude));
+      } catch (e) {}
     };
-    paintFallback();
-    window.addEventListener('resize', paintFallback);
-    bootId = setInterval(paintFallback, 1000);
-  })();
-  </script>
-  <script src="/sphere.js"></script>
-  <script src="/mic_border.js"></script>
-  <script src="/ws_client.js"></script>
+    ws.onclose = function() { setTimeout(connectWs, 2000); };
+    ws.onerror = function() { try { ws.close(); } catch (e) {} };
+  }
+  connectWs();
+})();
+</script>
 </body>
 </html>

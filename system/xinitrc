@@ -1,55 +1,41 @@
 #!/bin/sh
-# Cassie kiosk display — X11 on tty1 (startx)
 export DISPLAY=:0
 
 xset s off
 xset -dpms
 xset s noblank
 xsetroot -solid '#000000'
-
 unclutter -idle 0.5 -root &
 
-# Let X settle; wrong timing causes half-screen Chromium on Pi.
-sleep 2
-
-# Full HDMI output
+sleep 3
 xrandr --auto 2>/dev/null || true
-for out in HDMI-1 HDMI-2 HDMI; do
-  xrandr --output "$out" --auto 2>/dev/null && break
-done
 
-# Lightweight WM — helps Chromium fill the screen on X11
 if command -v matchbox-window-manager >/dev/null 2>&1; then
   matchbox-window-manager -use_titlebar no &
-elif command -v openbox >/dev/null 2>&1; then
-  openbox &
 fi
 sleep 1
 
-# Wait until the page actually serves HTML with canvas
-for i in $(seq 1 90); do
-  if curl -sf http://127.0.0.1:8766/ 2>/dev/null | grep -q 'id="canvas"'; then
+for i in $(seq 1 120); do
+  if curl -sf http://127.0.0.1:8766/ 2>/dev/null | grep -q getContext; then
     break
   fi
   sleep 1
 done
 
-URL="http://127.0.0.1:8766/?v=$(date +%s)"
-
-CHROMIUM_FLAGS="--kiosk --start-maximized \
-  --noerrdialogs --disable-infobars \
-  --disable-session-crashed-bubble --no-first-run \
-  --check-for-update-interval=31536000 \
-  --disable-dev-shm-usage --disable-translate \
-  --no-default-browser-check --disable-restore-session-state \
-  --disable-features=TranslateUI \
-  --disk-cache-size=1 --media-cache-size=1"
+URL="http://127.0.0.1:8766/"
 
 if command -v chromium-browser >/dev/null 2>&1; then
-  exec chromium-browser $CHROMIUM_FLAGS "$URL"
+  BROWSER=chromium-browser
 elif command -v chromium >/dev/null 2>&1; then
-  exec chromium $CHROMIUM_FLAGS "$URL"
+  BROWSER=chromium
 else
-  echo "No chromium found" >&2
   exec xterm
 fi
+
+exec "$BROWSER" \
+  --kiosk --start-maximized \
+  --noerrdialogs --disable-infobars --no-first-run \
+  --disable-session-crashed-bubble --disable-restore-session-state \
+  --check-for-update-interval=31536000 \
+  --disk-cache-size=1 \
+  "$URL"

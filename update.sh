@@ -41,7 +41,18 @@ chmod -R u+rX "$INSTALL_DIR/frontend" "$INSTALL_DIR/src"
 
 systemctl restart cassie.service
 sleep 4
+systemctl restart cassie.service
+sleep 4
 systemctl is-active --quiet cassie.service && log "Backend running ($NEW)" || die "journalctl -u cassie -n 30"
+
+for i in $(seq 1 30); do
+  if curl -sf http://127.0.0.1:8766/ | grep -q getContext; then
+    log "UI page OK (inline orb)"
+    break
+  fi
+  sleep 2
+done
+curl -sf http://127.0.0.1:8766/ | grep -q getContext || die "UI page missing orb — journalctl -u cassie -n 30"
 
 echo ""
 echo "Done. Reboot once:  sudo reboot"

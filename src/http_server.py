@@ -1,8 +1,7 @@
-"""HTTP server for Cassie frontend — robust on Pi (no 500 from bad paths/perms)."""
+"""HTTP server for Cassie frontend."""
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 
 from aiohttp import web
@@ -13,11 +12,24 @@ CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
     ".css": "text/css; charset=utf-8",
-    ".png": "image/png",
-    ".ico": "image/x-icon",
 }
 
 TEXT_SUFFIXES = {".html", ".js", ".css", ".json", ".txt"}
+
+# Same orb UI baked in — works even if frontend/ files missing
+BUILTIN_INDEX = b"""<!DOCTYPE html><html><head><meta charset=UTF-8><title>Cassie</title>
+<style>html,body{margin:0;background:#000;width:100%;height:100%}canvas{position:fixed;inset:0;width:100%;height:100%}</style>
+</head><body><canvas id=c></canvas><script>
+(function(){var c=document.getElementById('c'),x=c.getContext('2d'),s='idle',a=0,ta=0,t=0;
+function R(){c.width=innerWidth||800;c.height=innerHeight||480}addEventListener('resize',R);R();
+function D(){t++;a+=(ta-a)*0.2;var w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.11*(1+a*0.3+Math.sin(t*0.04)*0.04);
+x.fillStyle='#000';x.fillRect(0,0,w,h);var g=x.createRadialGradient(cx-r*0.2,cy-r*0.2,r*0.05,cx,cy,r);
+g.addColorStop(0,'#fff');g.addColorStop(0.3,'#55aaff');g.addColorStop(1,'#002244');x.fillStyle=g;
+x.beginPath();x.arc(cx,cy,r,0,6.28);x.fill();requestAnimationFrame(D)}D();
+function W(){try{var w=new WebSocket('ws://127.0.0.1:8765');w.onmessage=function(e){try{var m=JSON.parse(e.data);
+if(m.state)s=m.state;if(m.amplitude!=null)ta=m.amplitude;if(m.type==='amplitude')ta=m.amplitude;}catch(z){}};
+w.onclose=function(){setTimeout(W,2000)};w.onerror=function(){w.close()}}catch(e){setTimeout(W,2000)}}W();})();
+</script></body></html>"""
 
 
 def _read_body(path: Path) -> bytes:
@@ -31,13 +43,6 @@ def _read_body(path: Path) -> bytes:
     else:
         return raw
     return text.replace("\x00", "").replace("\r\n", "\n").encode("utf-8")
-
-
-FALLBACK_HTML = b"""<!DOCTYPE html><html><head><meta charset=utf-8><title>Cassie</title>
-<style>*{margin:0}html,body{background:#000;height:100%}#canvas{position:fixed;inset:0;width:100%;height:100%;background:#000}</style>
-</head><body><canvas id=canvas></canvas>
-<script src=/sphere.js></script><script src=/mic_border.js></script><script src=/ws_client.js></script>
-</body></html>"""
 
 
 @web.middleware
@@ -57,7 +62,6 @@ class HTTPServer:
         self.host = host
         self.port = port
         self._runner: web.AppRunner | None = None
-        log.info("Frontend dir: %s (exists=%s)", self.frontend_dir, self.frontend_dir.is_dir())
 
     async def start(self) -> None:
         app = web.Application(middlewares=[_errors])
@@ -78,8 +82,9 @@ class HTTPServer:
     async def _health(self, _req: web.Request) -> web.Response:
         idx = self.frontend_dir / "index.html"
         return web.json_response({
-            "ok": idx.is_file(),
-            "frontend": str(self.frontend_dir),
+            "ok": True,
+            "version": "1.3.0",
+            "index": idx.is_file(),
             "files": [p.name for p in self.frontend_dir.glob("*")] if self.frontend_dir.is_dir() else [],
         })
 
@@ -96,33 +101,32 @@ class HTTPServer:
         return await self._serve(name)
 
     async def _serve(self, name: str) -> web.Response:
-        if not self.frontend_dir.is_dir():
-            log.error("No frontend dir: %s", self.frontend_dir)
-            if name == "index.html":
-                return web.Response(body=FALLBACK_HTML, content_type="text/html; charset=utf-8")
-            raise web.HTTPNotFound()
+        if name == "index.html":
+            path = self.frontend_dir / "index.html"
+            if path.is_file():
+                try:
+                    body = _read_body(path)
+                    if b"getContext('2d')" in body or b'getContext("2d")' in body:
+                        return self._html(body)
+                except OSError:
+                    log.exception("Read failed: %s", path)
+            log.warning("Serving built-in index.html")
+            return self._html(BUILTIN_INDEX)
 
         path = self.frontend_dir / name
         if not path.is_file():
-            log.warning("Missing file: %s", path)
-            if name == "index.html":
-                return web.Response(body=FALLBACK_HTML, content_type="text/html; charset=utf-8")
             raise web.HTTPNotFound()
-
         try:
             body = _read_body(path)
-        except PermissionError:
-            log.exception("Permission denied: %s", path)
-            if name == "index.html":
-                return web.Response(body=FALLBACK_HTML, content_type="text/html; charset=utf-8")
-            raise web.HTTPForbidden()
         except OSError:
             log.exception("Read failed: %s", path)
             raise web.HTTPInternalServerError()
-
         ct = CONTENT_TYPES.get(path.suffix.lower(), "application/octet-stream")
+        return web.Response(body=body, content_type=ct, headers={"Cache-Control": "no-store"})
+
+    def _html(self, body: bytes) -> web.Response:
         return web.Response(
             body=body,
-            content_type=ct,
+            content_type="text/html; charset=utf-8",
             headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
         )
